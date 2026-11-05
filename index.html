@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fruit Mahjong</title>
+<style>
+:root{--bg1:#ffe9b8;--bg2:#ffb48f;--ink:#4a2c1a;--tile:#fffaf0;--side:#c79a52;--btn:#ff6f3c;--panel:#fffaf0;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a1a2e;--bg2:#4d2342;--ink:#ffeccf;--tile:#f4ecda;--side:#8e6d33;--panel:#3a2440;color-scheme:dark}}
+:root[data-theme="dark"]{--bg1:#2a1a2e;--bg2:#4d2342;--ink:#ffeccf;--tile:#f4ecda;--side:#8e6d33;--panel:#3a2440;color-scheme:dark}
+html,body{height:100%;margin:0}
+body{background:linear-gradient(160deg,var(--bg1),var(--bg2));color:var(--ink);font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none}
+header{text-align:center;padding:10px 12px 2px}
+header,footer{position:relative;z-index:1}
+#bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+#bg span{position:absolute;bottom:-80px;opacity:.2;filter:blur(1.5px);animation:float linear infinite}
+@keyframes float{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(var(--dx),-60vh) rotate(180deg)}100%{transform:translate(0,-120vh) rotate(360deg)}}
+h1{margin:0;font-size:22px}
+.sub{font-size:14px;opacity:.85;margin-top:2px}
+#board{flex:1;position:relative;z-index:1;margin:4px 0}
+.t{position:absolute;background:var(--tile);border-radius:8px;box-shadow:3px 3px 0 var(--side),4px 5px 6px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,filter .2s,opacity .25s}
+.t.blocked{filter:brightness(.78) saturate(.8)}
+.t.sel{outline:3px solid #ff3d71;transform:translateY(-3px)}
+.t.hint{animation:blink .35s 4 alternate}
+.t.pop{animation:squash .26s ease-out forwards}
+@keyframes squash{0%{transform:scale(1)}35%{transform:scale(1.35,.6)}100%{transform:scale(1.9,.15);opacity:0}}
+.t.shake{animation:shake .25s}
+@keyframes blink{to{outline:3px solid #2bd96b;transform:translateY(-4px)}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+footer{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:6px 12px 14px}
+button{font:600 15px system-ui;background:var(--btn);color:#fff;border:0;border-radius:12px;padding:10px 13px;cursor:pointer}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:99999}
+#ov div{background:var(--panel);color:var(--ink);padding:26px 32px;border-radius:18px;text-align:center;max-width:80%}
+#ov h2{margin:0 0 8px}
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:10px;display:none;z-index:99998}
+#st{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999}
+#st div{background:var(--panel);color:var(--ink);padding:28px 34px;border-radius:18px;text-align:center;max-width:80%}
+#st h2{margin:0 0 8px}#st p{margin:0 0 16px}#go{font-size:20px;padding:12px 28px}
+</style></head><body>
+<header><h1>🍓 Fruit Mahjong</h1><div class="sub" id="hud"></div></header>
+<div id="bg"></div>
+<div id="board"></div>
+<footer><button id="bh">💡 Hint</button><button id="bs">🔀 Shuffle</button><button id="br">↻ Restart</button><button id="bm">🎵</button></footer>
+<div id="toast"></div>
+<div id="st"><div><h2>🍓 Fruit Mahjong</h2><p>Match pairs of free fruit tiles to clear the board.</p><button id="go">▶ Begin</button></div></div>
+<div id="ov"><div><h2 id="ot"></h2><p id="om"></p><button id="ob">Next level</button></div></div>
+<script>
+const FR=["🍎","🍌","🍇","🍓","🍊","🍋","🍉","🍒","🍑","🍍","🥝","🍐"];
+const LV=[
+{n:"Garden",k:6,e:1,H:4,l:["########", "########", "########", "########"]},
+{n:"Heart",k:7,e:2,H:5,l:[" ## ## ", "#######", "#######", " ##### ", "  ###  "]},
+{n:"Mountain",k:7,e:3,H:6,l:["   ##   ", "  ####  ", " ###### ", "########"]},
+{n:"Pyramid",k:8,e:3,H:4,l:["#######", "#######", "#######", "#######"]},
+{n:"Frame",k:8,e:3,H:7,l:["########", "#      #", "#      #", "#      #", "########"]},
+{n:"Diamond",k:9,e:2,H:6,l:["   ##   ", "  ####  ", " ###### ", "########", " ###### ", "  ####  ", "   ##   "]},
+{n:"Twin Towers",k:9,e:3,H:5,l:["###   ###", "###   ###", "#########", "###   ###", "###   ###"]},
+{n:"Cross",k:10,e:3,H:5,l:["  ###  ", "  ###  ", "#######", "#######", "#######", "  ###  ", "  ###  "]},
+{n:"Butterfly",k:10,e:3,H:5,l:["###   ###", "#### ####", "#########", "#### ####", "###   ###"]},
+{n:"Fortress",k:11,e:2,H:6,l:["# #   # #", "#########", "#########", "#########", "  #####  "]},
+{n:"Twin Peaks",k:11,e:3,H:6,l:["##########", "##########", "##########"]},
+{n:"Grand Finale",k:12,e:3,H:5,l:["########", "########", "########", "########", "########"]}
+];
+let lv=0,tiles=[],sel=null,score=0,busy=false;
+const $=id=>document.getElementById(id),board=$('board');
+const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const live=()=>tiles.filter(t=>!t.gone);
+function isFree(t,l){
+  let L=0,R=0;
+  for(const s of l){if(s===t)continue;
+    if(s.z===t.z+1&&Math.abs(s.x-t.x)<1&&Math.abs(s.y-t.y)<1)return false;
+    if(s.z===t.z&&Math.abs(s.y-t.y)<1){const d=s.x-t.x;if(d<0&&d>-1.5)L=1;if(d>0&&d<1.5)R=1}}
+  return !(L&&R);
+}
+function assign(ts,k){
+  for(let a=0;a<80;a++){
+    let rem=ts.slice(),order=[];
+    while(rem.length){
+      const f=sh(rem.filter(t=>isFree(t,rem)));
+      if(f.length<2)break;
+      order.push([f[0],f[1]]);rem=rem.filter(t=>t!==f[0]&&t!==f[1]);
+    }
+    if(!rem.length){const ty=sh(FR.slice()).slice(0,k);order.forEach((p,i)=>{p[0].f=p[1].f=ty[i%k]});return}
+  }
+}
+function build(d){
+  const out=[];let cur=new Set();
+  d.l.forEach((r,y)=>[...r].forEach((c,x)=>{if(c==='#')cur.add(x+','+y)}));
+  for(let z=0;z<d.H&&cur.size;z++){
+    cur.forEach(k=>{const[x,y]=k.split(',').map(Number);out.push({x,y,z})});
+    if((z+1)%d.e===0){const nx=new Set();cur.forEach(k=>{const[x,y]=k.split(',').map(Number);if(cur.has((x-1)+','+y)&&cur.has((x+1)+','+y))nx.add(k)});cur=nx}
+  }
+  if(out.length%2)out.pop();
+  return out;
+}
+function start(i){
+  lv=i;board.innerHTML='';tiles=[];sel=null;busy=false;
+  const d=LV[i];
+  tiles=build(d);
+  {const bw=board.clientWidth,bh=board.clientHeight,c=Math.max(...tiles.map(t=>t.x))+1,r=Math.max(...tiles.map(t=>t.y))+1,mz=Math.max(...tiles.map(t=>t.z)),
+   fit=(c,r)=>Math.min((bw-8-mz*8)/c,(bh-8-mz*8)/(r*1.15));
+   if(fit(r,c)>fit(c,r)*1.05)tiles.forEach(t=>{[t.x,t.y]=[t.y,t.x]})}
+  assign(tiles,d.k);
+  tiles.forEach(t=>{const e=document.createElement('div');e.className='t';e.onclick=()=>click(t);t.e=e;board.appendChild(e)});
+  layout();refresh();
+}
+function layout(){
+  const bw=board.clientWidth,bh=board.clientHeight;
+  const cols=Math.max(...tiles.map(t=>t.x))+1,rows=Math.max(...tiles.map(t=>t.y))+1,mz=Math.max(...tiles.map(t=>t.z));
+  let w=Math.min((bw-8-mz*8)/cols,(bh-8-mz*8)/(rows*1.15));w=Math.min(w,92);
+  const h=Math.max(w*1.15,Math.min(w*1.45,(bh-8-mz*8)/rows)),dz=w*.09,ox=(bw-cols*w+mz*dz)/2,oy=(bh-rows*h+mz*dz)/2;
+  tiles.forEach(t=>{const s=t.e.style;
+    s.width=(w-3)+'px';s.height=(h-3)+'px';s.fontSize=(w*.58)+'px';
+    s.left=(ox+t.x*w-t.z*dz)+'px';s.top=(oy+t.y*h-t.z*dz)+'px';s.zIndex=t.z*1000+t.y*10+t.x});
+}
+function refresh(){
+  const l=live();
+  tiles.forEach(t=>{t.e.textContent=t.f;t.e.classList.toggle('blocked',!t.gone&&!isFree(t,l));t.e.classList.toggle('sel',t===sel)});
+  $('hud').textContent=`Level ${lv+1}/${LV.length} · ${LV[lv].n} · ${l.length} tiles · ⭐ ${score}`;
+}
+function pairs(){
+  const l=live(),f=l.filter(t=>isFree(t,l)),out=[];
+  for(let i=0;i<f.length;i++)for(let j=i+1;j<f.length;j++)if(f[i].f===f[j].f)out.push([f[i],f[j]]);
+  return out;
+}
+function toast(m){const e=$('toast');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',1600)}
+function click(t){
+  if(busy||t.gone)return;
+  if(!isFree(t,live())){t.e.classList.add('shake');setTimeout(()=>t.e.classList.remove('shake'),260);return}
+  if(!sel){sel=t;bip()}
+  else if(sel===t){sel=null}
+  else if(sel.f===t.f){
+    const a=sel,b=t;sel=null;busy=true;
+    a.e.classList.add('pop');b.e.classList.add('pop');splat();
+    setTimeout(()=>{a.gone=b.gone=true;a.e.remove();b.e.remove();score+=10;busy=false;refresh();after()},260);
+    return;
+  } else sel=t;
+  refresh();
+}
+function after(){
+  if(!live().length){win();return}
+  if(!pairs().length){toast('No moves – shuffling!');assign(live(),LV[lv].k);refresh()}
+}
+let AC;
+const ctx=()=>{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC};
+function splat(){try{
+ const A=ctx(),t=A.currentTime,k=.8+Math.random()*.5,o=A.createOscillator(),g=A.createGain();
+ o.type='sine';o.frequency.setValueAtTime(420*k,t);o.frequency.exponentialRampToValueAtTime(70*k,t+.22);
+ g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);
+ o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.26);
+ const n=A.createBufferSource(),b=A.createBuffer(1,A.sampleRate*.2,A.sampleRate),d=b.getChannelData(0);
+ for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+ n.buffer=b;const f=A.createBiquadFilter();f.type='bandpass';f.Q.value=2;
+ f.frequency.setValueAtTime(1800,t);f.frequency.exponentialRampToValueAtTime(300,t+.18);
+ const g2=A.createGain();g2.gain.value=.5;n.connect(f);f.connect(g2);g2.connect(A.destination);n.start(t);
+}catch(e){}}
+function bip(){try{note(880,ctx().currentTime,.12,'sine')}catch(e){}}
+function note(f,s,d,ty){const A=ctx(),o=A.createOscillator(),g=A.createGain();
+ o.type=ty||'triangle';o.frequency.value=f;g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.25,s+.02);g.gain.exponentialRampToValueAtTime(.001,s+d);
+ o.connect(g);g.connect(A.destination);o.start(s);o.stop(s+d+.05)}
+function fanfare(){try{const t=ctx().currentTime;
+ [[523,0,.15],[659,.13,.15],[784,.26,.15],[1047,.39,.3],[784,.72,.14],[1047,.86,.9],[1319,.86,.9],[1568,.86,.9]].forEach(([f,s,d])=>note(f,t+s,d,'square'));
+ [262,330,392].forEach(f=>note(f,t+.86,.9));
+}catch(e){}}
+function confetti(){
+ const c=document.createElement('canvas');c.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:100000';
+ c.width=innerWidth;c.height=innerHeight;document.body.appendChild(c);const x=c.getContext('2d');
+ const cols=['#ff3d71','#ffd93d','#2bd96b','#3da5ff','#ff8a3d','#b46bff'],P=[];
+ for(let i=0;i<220;i++)P.push({x:Math.random()*c.width,y:-20-Math.random()*c.height*.6,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,r:Math.random()*6.28,vr:(Math.random()-.5)*.3,s:6+Math.random()*8,c:cols[i%6]});
+ const st=performance.now();
+ (function f(n){x.clearRect(0,0,c.width,c.height);
+  P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);x.restore()});
+  if(n-st<5000)requestAnimationFrame(f);else c.remove()})(st);
+}
+function win(){
+  const last=lv===LV.length-1;
+  score+=50;
+  $('ot').textContent=last?'🎉 All fruits sorted!':'🍉 Level complete!';
+  $('om').textContent=`Score: ${score}`;
+  $('ob').textContent=last?'Play again':'Next level';
+  $('ob').onclick=()=>{$('ov').style.display='none';if(last){score=0;start(0)}else start(lv+1)};
+  $('ov').style.display='flex';fanfare();confetti();
+}
+$('bh').onclick=()=>{if(busy)return;const p=pairs();if(!p.length)return;p[0].forEach(t=>{t.e.classList.add('hint');setTimeout(()=>t.e.classList.remove('hint'),1500)})};
+$('bs').onclick=()=>{if(busy)return;sel=null;assign(live(),LV[lv].k);refresh()};
+$('br').onclick=()=>start(lv);
+const mus=new Audio('mahjong.mp3');mus.loop=true;mus.volume=.35;let muted=false,begun=false;
+$('go').onclick=()=>{begun=true;$('st').style.display='none';ctx();mus.play().catch(()=>{})};
+$('bm').onclick=()=>{muted=!muted;mus.muted=muted;$('bm').textContent=muted?'🔇':'🎵'};
+document.addEventListener('visibilitychange',()=>{if(!begun)return;if(document.hidden)mus.pause();else mus.play().catch(()=>{})});
+addEventListener('resize',layout);
+for(let i=0;i<22;i++){const s=document.createElement('span');s.textContent=FR[i%FR.length];
+ s.style.cssText=`left:${Math.random()*95}%;font-size:${26+Math.random()*40}px;animation-duration:${16+Math.random()*16}s;animation-delay:-${Math.random()*30}s;--dx:${(Math.random()-.5)*120}px`;
+ $('bg').appendChild(s)}
+start(0);
+</script></body></html>
