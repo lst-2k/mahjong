@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
 <title>Fruit Mahjong</title>
 <style>
 :root{--bg1:#ffe9b8;--bg2:#ffb48f;--ink:#4a2c1a;--tile:#fffaf0;--side:#c79a52;--btn:#ff6f3c;--panel:#fffaf0;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a1a2e;--bg2:#4d2342;--ink:#ffeccf;--tile:#f4ecda;--side:#8e6d33;--panel:#3a2440;color-scheme:dark}}
 :root[data-theme="dark"]{--bg1:#2a1a2e;--bg2:#4d2342;--ink:#ffeccf;--tile:#f4ecda;--side:#8e6d33;--panel:#3a2440;color-scheme:dark}
-html,body{height:100%;margin:0}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 body{background:linear-gradient(160deg,var(--bg1),var(--bg2));color:var(--ink);font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none}
-header{text-align:center;padding:10px 12px 2px}
+header{text-align:center;padding:.65em .8em .15em}
 header,footer{position:relative;z-index:1}
 #bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
 #bg span{position:absolute;bottom:-80px;opacity:.2;filter:blur(1.5px);animation:float linear infinite}
 @keyframes float{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(var(--dx),-60vh) rotate(180deg)}100%{transform:translate(0,-120vh) rotate(360deg)}}
-h1{margin:0;font-size:22px}
-.sub{font-size:14px;opacity:.85;margin-top:2px}
+h1{margin:0;font-size:1.45em}
+.sub{font-size:.93em;opacity:.85;margin-top:2px}
 #board{flex:1;position:relative;z-index:1;margin:4px 0}
-.t{position:absolute;background:var(--tile);border-radius:8px;box-shadow:3px 3px 0 var(--side),4px 5px 6px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,filter .2s,opacity .25s}
+.t{position:absolute;background:var(--tile);border-radius:calc(8px*var(--s,1));box-shadow:calc(3px*var(--s,1)) calc(3px*var(--s,1)) 0 var(--side),calc(4px*var(--s,1)) calc(5px*var(--s,1)) calc(6px*var(--s,1)) rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,filter .2s,opacity .25s}
 .t.blocked{filter:brightness(.78) saturate(.8)}
 .t.sel{outline:3px solid #ff3d71;transform:translateY(-3px)}
 .t.hint{animation:blink .35s 4 alternate}
@@ -25,25 +25,27 @@ h1{margin:0;font-size:22px}
 .t.shake{animation:shake .25s}
 @keyframes blink{to{outline:3px solid var(--hint,#2bd96b);transform:translateY(-4px)}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-footer{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:6px 12px 14px}
-button{font:600 15px system-ui;background:var(--btn);color:#fff;border:0;border-radius:12px;padding:10px 13px;cursor:pointer}
+footer{display:flex;flex-wrap:wrap;gap:.5em;justify-content:center;padding:.4em .8em .9em}
+button{font:600 1em system-ui;background:var(--btn);color:#fff;border:0;border-radius:.8em;padding:.65em .85em;cursor:pointer}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:99999}
-#ov div{background:var(--panel);color:var(--ink);padding:26px 32px;border-radius:18px;text-align:center;max-width:80%}
+#ov div{background:var(--panel);color:var(--ink);padding:1.7em 2.1em;border-radius:1.2em;text-align:center;max-width:80%}
 #ov h2{margin:0 0 8px}
-#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:10px;display:none;z-index:99998}
+#toast{position:fixed;top:4.5em;left:50%;transform:translateX(-50%);background:var(--panel);color:var(--ink);padding:.55em .9em;border-radius:.7em;display:none;z-index:99998}
 #st{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999}
-#st>div{background:var(--panel);color:var(--ink);padding:28px 34px;border-radius:18px;text-align:center;max-width:80%}
-#st h2{margin:0 0 8px}#st p{margin:0 0 16px}#go{font-size:20px;padding:12px 28px}
-#ch{display:flex;gap:12px;justify-content:center;margin-bottom:18px}
-.opt{display:flex;flex-direction:column;gap:6px;align-items:center;background:transparent;color:var(--ink);border:3px solid rgba(128,128,128,.45);border-radius:14px;padding:12px 14px;font-size:18px;transition:transform .15s}
-.opt span{font-size:22px;display:flex;gap:4px}
-.pc{background:#fff;border-radius:5px;padding:1px 5px;font-size:17px;box-shadow:0 1px 2px rgba(0,0,0,.35)}.pc.r{color:#d62839}.pc.k{color:#1b1b2f}
-.opt.sel{border-color:#ffd93d;background:rgba(255,217,61,.22);transform:scale(1.07);box-shadow:0 0 14px rgba(255,217,61,.6)}
+#st>div{background:var(--panel);color:var(--ink);padding:1.85em 2.25em;border-radius:1.2em;text-align:center;max-width:80%}
+#st h2{margin:0 0 .5em;font-size:1.5em}#st p{margin:0 0 1em}#go{font-size:1.3em;padding:.6em 1.4em}
+#ch{display:flex;gap:.8em;justify-content:center;margin-bottom:1.2em}
+.opt{display:flex;flex-direction:column;gap:6px;align-items:center;background:transparent;color:var(--ink);border:.2em solid rgba(128,128,128,.45);border-radius:.9em;padding:.65em .8em;font-size:1.2em;transition:transform .15s}
+.opt small{font-size:.65em;opacity:.85}
+.opt span{font-size:1.2em;display:flex;gap:.25em}
+.pc{background:#fff;border-radius:.3em;padding:.05em .3em;font-size:.8em;box-shadow:0 .06em .12em rgba(0,0,0,.35)}.pc.r{color:#d62839}.pc.k{color:#1b1b2f}
+:root{--fs:clamp(13px,min(3.85vw,1.8vh),64px)}body{font-size:var(--fs)}
+.opt.sel{border-color:#ffd93d;background:rgba(255,217,61,.22);transform:scale(1.07);box-shadow:0 0 .9em rgba(255,217,61,.6)}
 #go:disabled{opacity:.4;cursor:default}
 #go.pulse{animation:pulse 1s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 var(--btn)}50%{transform:scale(1.08);box-shadow:0 0 0 14px transparent}}
+@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 var(--btn)}50%{transform:scale(1.08);box-shadow:0 0 0 .9em transparent}}
 .t.card{box-sizing:border-box;color:#1b1b2f;border:1px solid #cfc8b8;flex-direction:column;background:#fff}.t.card.red{color:#d62839}
-.t.card i{position:absolute;top:5%;left:9%;font-style:normal;font-size:.4em;line-height:1.05;font-weight:700;text-align:center}.t.card span{font-size:.95em;line-height:1}
+.t.card i{position:absolute;top:4%;left:8%;font-style:normal;font-size:.42em;line-height:1;font-weight:700;text-align:center}.t.card span{font-size:.78em;line-height:1;position:relative;top:.35em}
 </style></head><body>
 <header><h1>🍓 Fruit Mahjong</h1><div class="sub" id="hud"></div></header>
 <div id="bg"></div>
@@ -51,14 +53,14 @@ button{font:600 15px system-ui;background:var(--btn);color:#fff;border:0;border-
 <footer><button id="bh">💡 Hint</button><button id="bs">🔀 Shuffle</button><button id="br">↻ Restart</button><button id="bm">🎵</button></footer>
 <div id="toast"></div>
 <div id="st"><div><h2>Mahjong Match</h2><p>Match pairs of free tiles to clear the board.<br>Choose your game:</p>
-<div id="ch"><button class="opt" data-m="fruit"><span>🍓🍌🍇</span>Fruit</button><button class="opt" data-m="cards"><span><b class="pc k">A♠</b><b class="pc r">K♥</b><b class="pc r">Q♦</b></span>Cards</button></div>
+<div id="ch"><button class="opt" data-m="fruit"><span>🍓🍌🍇</span>Fruit<small>(easy)</small></button><button class="opt" data-m="cards"><span><b class="pc k">A♠</b><b class="pc r">K♥</b><b class="pc r">Q♦</b></span>Cards<small>(difficult)</small></button></div>
 <button id="go" disabled>▶ Begin</button></div></div>
 <div id="ov"><div><h2 id="ot"></h2><p id="om"></p><button id="ob">Next level</button></div></div>
 <script>
 const FRUIT=["🍎","🍌","🍇","🍓","🍊","🍋","🍉","🍒","🍑","🍍","🥝","🍐"];
-const SETS={fruit:{t:"🍓 Fruit Mahjong",l:FRUIT,bg:FRUIT},cards:{t:"🃏 Card Mahjong",l:["A♠","K♥","Q♦","J♣","10♥","9♠","8♦","7♣","6♥","5♠","4♦","3♣"],bg:["♠","♥","♦","♣"]}};
+const SETS={fruit:{t:"🍓 Fruit Mahjong",l:FRUIT,bg:FRUIT},cards:{t:"🃏 Card Mahjong",l:["A","2","3","4","5","6","7","8","9","10","J","Q","K"].flatMap(r=>["♠","♥","♦","♣"].map(u=>r+u)),bg:["♠","♥","♦","♣"]}};
 let FR=SETS.fruit.l,mode='fruit';
-const LV=[
+const LVF=[
 {n:"Garden",k:6,e:1,H:4,l:["########", "########", "########", "########"]},
 {n:"Heart",k:7,e:2,H:5,l:[" ## ## ", "#######", "#######", " ##### ", "  ###  "]},
 {n:"Mountain",k:7,e:3,H:6,l:["   ##   ", "  ####  ", " ###### ", "########"]},
@@ -72,6 +74,21 @@ const LV=[
 {n:"Twin Peaks",k:11,e:3,H:6,l:["##########", "##########", "##########"]},
 {n:"Grand Finale",k:12,e:3,H:5,l:["########", "########", "########", "########", "########"]}
 ];
+const LVC=[
+{n:"Pyramid",k:52,e:3,H:4,l:["#######", "#######", "#######", "#######"]},
+{n:"Heart",k:52,e:3,H:5,l:[" ## ## ", "#######", "#######", " ##### ", "  ###  "]},
+{n:"Mountain",k:52,e:3,H:8,l:["   ##   ", "  ####  ", " ###### ", "########"]},
+{n:"Frame",k:52,e:3,H:7,l:["########", "#      #", "#      #", "#      #", "########"]},
+{n:"Garden",k:52,e:2,H:4,l:["########", "########", "########", "########"]},
+{n:"Diamond",k:52,e:2,H:6,l:["   ##   ", "  ####  ", " ###### ", "########", " ###### ", "  ####  ", "   ##   "]},
+{n:"Twin Towers",k:52,e:3,H:5,l:["###   ###", "###   ###", "#########", "###   ###", "###   ###"]},
+{n:"Cross",k:52,e:3,H:5,l:["  ###  ", "  ###  ", "#######", "#######", "#######", "  ###  ", "  ###  "]},
+{n:"Butterfly",k:52,e:3,H:5,l:["###   ###", "#### ####", "#########", "#### ####", "###   ###"]},
+{n:"Fortress",k:52,e:2,H:6,l:["# #   # #", "#########", "#########", "#########", "  #####  "]},
+{n:"Twin Peaks",k:52,e:3,H:6,l:["##########", "##########", "##########"]},
+{n:"Grand Finale",k:52,e:3,H:5,l:["########", "########", "########", "########", "########"]}
+];
+let LV=LVF;
 let lv=0,tiles=[],sel=null,score=0,busy=false;
 const $=id=>document.getElementById(id),board=$('board');
 const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -118,10 +135,11 @@ function start(i){
 function layout(){
   const bw=board.clientWidth,bh=board.clientHeight;
   const cols=Math.max(...tiles.map(t=>t.x))+1,rows=Math.max(...tiles.map(t=>t.y))+1,mz=Math.max(...tiles.map(t=>t.z));
-  let w=Math.min((bw-8-mz*8)/cols,(bh-8-mz*8)/(rows*1.15));w=Math.min(w,92);
+  let w=Math.min((bw-8-mz*8)/cols,(bh-8-mz*8)/(rows*1.15));w=Math.min(w,Math.max(92,Math.min(bw,bh)*.25));
   const h=Math.max(w*1.15,Math.min(w*1.45,(bh-8-mz*8)/rows)),dz=w*.09,ox=(bw-cols*w+mz*dz)/2,oy=(bh-rows*h+mz*dz)/2;
+  const S=Math.max(1,w/60);board.style.setProperty('--s',S);
   tiles.forEach(t=>{const s=t.e.style;
-    s.width=(w-3)+'px';s.height=(h-3)+'px';s.fontSize=(w*.58)+'px';
+    s.width=(w-3*S)+'px';s.height=(h-3*S)+'px';s.fontSize=(w*.58)+'px';
     s.left=(ox+t.x*w-t.z*dz)+'px';s.top=(oy+t.y*h-t.z*dz)+'px';s.zIndex=t.z*1000+t.y*10+t.x});
 }
 const face=f=>{const r=f.slice(0,-1),u=f.slice(-1);return '<i>'+r+'<br>'+u+'</i><span>'+u+'</span>'};
@@ -200,6 +218,8 @@ const mus=new Audio('mahjong.mp3');mus.loop=true;mus.volume=.35;let muted=false,
 $('go').onclick=()=>{begun=true;$('st').style.display='none';ctx();mus.play().catch(()=>{})};
 $('bm').onclick=()=>{muted=!muted;mus.muted=muted;$('bm').textContent=muted?'🔇':'🎵'};
 document.addEventListener('visibilitychange',()=>{if(!begun)return;if(document.hidden)mus.pause();else mus.play().catch(()=>{})});
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+['gesturestart','dblclick','contextmenu'].forEach(n=>document.addEventListener(n,e=>e.preventDefault()));
 addEventListener('resize',layout);
 function buildBg(){const b=$('bg'),A=SETS[mode].bg;b.innerHTML='';
  for(let i=0;i<22;i++){const s=document.createElement('span');s.textContent=A[i%A.length];
@@ -207,7 +227,7 @@ function buildBg(){const b=$('bg'),A=SETS[mode].bg;b.innerHTML='';
   b.appendChild(s)}}
 const TH=['--bg1','--bg2','--ink','--tile','--side','--btn','--panel','--hint'];
 function setMode(m){
- mode=m;FR=SETS[m].l;score=0;
+ mode=m;FR=SETS[m].l;LV=m==='cards'?LVC:LVF;score=0;
  const r=document.documentElement.style;TH.forEach(k=>r.removeProperty(k));
  if(m==='cards')Object.entries({'--bg1':'#2e8b57','--bg2':'#145a32','--ink':'#f3fff7','--tile':'#ffffff','--side':'#a89f8a','--btn':'#c0392b','--panel':'#0e3b25','--hint':'#ffd93d'}).forEach(([k,v])=>r.setProperty(k,v));
  document.querySelectorAll('.opt').forEach(b=>b.classList.toggle('sel',b.dataset.m===m));
